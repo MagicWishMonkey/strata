@@ -2,19 +2,7 @@ import datetime
 from strata import *
 from strata.types import IModel
 from strata.types import MetaModel
-# from fuze.types import TypeTable
 
-
-
-# class MetaModel(type):
-#     def __new__(meta, name, bases, dct):
-#         return super(MetaModel, meta).__new__(meta, name, bases, dct)
-#
-#     def __init__(cls, name, bases, dct):
-#         if name != "Model":
-#             TypeTable.register(cls)
-#
-#         super(MetaModel, cls).__init__(name, bases, dct)
 
 
 class Model(IModel):
@@ -69,15 +57,6 @@ class Model(IModel):
 
             raise ex
 
-    # @staticmethod
-    # def restore(data):
-    #     obj = util.unjson(data)
-    #     uri = obj["_"]
-    #     type = uri.split("#")[0]
-    #     cls = MetaModel.find(type)
-    #     model = cls(**(obj))
-    #     return model
-
     @property
     def model_type(self):
         return self.__class__.__name__
@@ -115,35 +94,7 @@ class Model(IModel):
 
     def __str__(self):
         return self.uri
-        # type = self.__class__.__name__
-        # id, label = None, None
-        # try:
-        #     id = self.id
-        # except:
-        #     pass
-        #
-        # try:
-        #     label = self.label
-        # except:
-        #     pass
-        #
-        # if id is not None or label is not None:
-        #     if id is not None and label is not None:
-        #         return "%s#%s [%s]" % (type, str(id), label)
-        #     elif id is not None:
-        #         return "%s#%s" % (type, str(id))
-        #     else:
-        #         return "%s [%s]" % (type, label)
-        #
-        # return type
 
     def __repr__(self):
         return self.__str__()
-
-
-# class Member(Model):
-#     __slots__ = [
-#         "id",
-#         "label"
-#     ]
 

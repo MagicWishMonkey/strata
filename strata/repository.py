@@ -5,7 +5,6 @@ from strata.types import MetaRepository
 from strata.types import MetaModel
 
 
-
 class Repository(IRepository, Extension):
     __metaclass__ = MetaRepository
     __select_query__ = None
