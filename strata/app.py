@@ -4,10 +4,6 @@ from strata.db.database import Database
 from strata.db.redis_client import RedisClient
 
 
-
-
-
-
 class App(object):
     __instance__ = None
 
@@ -36,7 +32,6 @@ class App(object):
 
         raise Exception("The requested database could not be found: %s" % name)
 
-
     def context(self):
         return Context(self)
 
@@ -51,6 +46,7 @@ class App(object):
     def get():
         return App.__instance__
 
+
 @App.plugin
 def load(self):
     if self.__active__ is True:
@@ -62,8 +58,6 @@ def load(self):
         log.info("The settings file is not specified. Skipping.")
         self.__active__ = True
         return self
-
-
 
     def init_dbs(self, settings):
         dbs = []
@@ -84,10 +78,7 @@ def load(self):
         self.__dbs__ = dbs
 
     init_dbs(self, settings)
-
     self.__active__ = True
-
-
 
 
 App.__instance__ = App()
