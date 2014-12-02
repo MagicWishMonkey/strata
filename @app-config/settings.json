@@ -1,0 +1,48 @@
+{
+    "application": {
+        "name": "strata",
+        "environment": "production",
+        "administrators": [
+            "Ron Rodenberg <rodenberg@gmail.com>"
+        ]
+    },
+    "flags": {
+        "debug": false,
+        "quarantine": false
+    },
+    "keychain":{
+        "salt": "DEFAULT_APPLICATION_SALT",
+        "password": "DEFAULT_APPLICATION_PASSWORD_KEY",
+        "hmac": "DEFAULT_HMAC"
+    },
+    "directories": {
+        "queries": "queries",
+        "emails": "emails",
+        "temp": "temp"
+    },
+    "databases": {
+        "default": {
+            "driver": "mysql",
+            "server": "localhost",
+            "port": 3306,
+            "database": "test",
+            "username": "test",
+            "password": "abc123",
+            "pool_size": 10
+        },
+        "redis": {
+            "driver": "redis",
+            "server": "localhost",
+            "database": "1",
+            "port": 6379,
+            "pool": 100
+        }
+    },
+    "email": {
+        "default_sender": "Willy Wonka <willy.wonka@gmail.com>",
+        "server": "smtp.gmail.com",
+        "port": 587,
+        "username": "willy.wonka",
+        "password": "wonkawonka"
+    }
+}
