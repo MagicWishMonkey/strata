@@ -1,0 +1,18 @@
+# compiled python files
+*.pyc
+*.pyo
+
+# C extensions
+*.so
+
+# Django stuff:
+*.log
+
+# Ignore Mac system files
+.DS_Store
+/.DS_Store$
+
+
+# ignore IDE related files
+.idea/
+*.iml
