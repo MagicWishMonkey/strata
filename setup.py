@@ -9,7 +9,6 @@ with open("docs%srequirements.txt" % os.sep) as f:
 with open("docs%sreadme.txt" % os.sep) as f:
     readme = f.read()
 
-
 setup(
     name = "strata",
     version = "1.0",
