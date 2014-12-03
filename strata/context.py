@@ -79,12 +79,7 @@ class Context(object):
                 if current_session.person != person:
                     self.__session__ = None
                     return self
-        # elif isinstance(session, Session):
-        #     if current_session is not None:
-        #         if current_session == session:
-        #             return self
-        #
-        #     self.__session__ = session
+
         return self
 
 
