@@ -38,35 +38,6 @@ class Request(object):
 
         return self
 
-    # def set(self, data=None, json=None, xml=None, form=None, headers=None):
-    #     from fusion import tools
-    #     if json is None and data is not None:
-    #         if isinstance(data, basestring) is False:
-    #             json = tools.json(data)
-    #             data = None
-    #
-    #     if json:
-    #         if isinstance(json, basestring) is False:
-    #             json = tools.json(json)
-    #         self.body = json
-    #         self.content_type = "application/json"
-    #     elif json:
-    #         self.body = xml
-    #         self.content_type = "text/xml"
-    #     else:
-    #         self.body = data
-    #     self._method = "POST"
-    #
-    #     if headers is not None:
-    #         for key in headers.keys():
-    #             val = headers[key]
-    #             self.header(key, val)
-    #
-    #     if form is not None:
-    #         self.form(**(form))
-    #
-    #     return self
-
     @property
     def attributes(self):
         attributes = self.__attrs__
