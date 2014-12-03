@@ -96,6 +96,7 @@ def unbase36(data):
 def json_nice(obj):
     return json(obj, indent=2)
 
+
 def json(obj, indent=None, sort_keys=True, pretty=False):
     """Convert the object instance into a json blob."""
     assert obj is not None, "The input parameter is null!"
