@@ -32,12 +32,6 @@ is_list = lambda o: isinstance(o, (list, tuple))
 is_dict = lambda o: isinstance(o, dict)
 
 
-# def __destroy__():
-#     terminal.whitespace()
-# terminal.whitespace()
-# terminal.green()
-# atexit.register(__destroy__)
-
 #atexit.register(App.destroy)
 
 
