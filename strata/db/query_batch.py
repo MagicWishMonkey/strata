@@ -1,5 +1,5 @@
-from strata import util
-from strata.db.query import Query
+from .. import toolkit
+from .query import Query
 
 
 class QueryBatch(object):
@@ -23,15 +23,15 @@ class QueryBatch(object):
         self.queries = []
         return self
 
-    # def enable_auto_flush(self, query_count):
-    #     self.auto_flush = query_count
-    #     return self
+        # def enable_auto_flush(self, query_count):
+        #     self.auto_flush = query_count
+        #     return self
 
-    # def begin(self):
-    #     inner = []
-    #     self.queries.append(inner)
-    #     self.inner = inner
-    #     return self
+        # def begin(self):
+        #     inner = []
+        #     self.queries.append(inner)
+        #     self.inner = inner
+        #     return self
 
         # if self.inside_block is True:
         #     self.queries.append("COMMIT;")
@@ -57,7 +57,7 @@ class QueryBatch(object):
             return self
 
         queries = self.queries# if self.inner is None else self.inner
-        if util.is_function(sql) is True:
+        if toolkit.is_function(sql) is True:
             queries.append(sql)
             return self
 
@@ -123,7 +123,7 @@ class QueryBatch(object):
             except Exception, ex:
                 if retries > 1:
                     retries = (retries - 1)
-                    util.sleep(1)
+                    toolkit.sleep(1)
                     continue
                 raise ex
 

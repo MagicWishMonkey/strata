@@ -1,7 +1,8 @@
-from strata.db.config import Config
-from strata.db.query import Query
-from strata.db.query_batch import QueryBatch
-from strata import util
+from .config import Config
+from .query import Query
+from .query_batch import QueryBatch
+from .error import *
+from .. import toolkit
 from sqlalchemy import text
 from sqlalchemy import create_engine
 
@@ -175,35 +176,6 @@ class Database(object):
     def query_buffer(self):
         return QueryBatch.create(self)
 
-    # def __fetch_query(self, sql, ctx):
-    #     qry = None
-    #     if sql.strip().find(' ') == -1:
-    #         try:
-    #             qry = self._queries.get(sql)
-    #         except Exception, ex:
-    #             #raise ex.extend(DatabaseException(None,self))
-    #             raise ex
-    #     else:
-    #         key = tools.hash(sql.strip().lower())
-    #         qry = self._queries.try_get(key)
-    #         if qry is None:
-    #             if qry is None:
-    #                 qry = Query.new(sql)
-    #                 self._queries.register(key, qry.clone())
-    #
-    #     qry.db = self
-    #     qry.ctx = ctx
-    #     return qry
-    #
-    # def query(self, *args, **params):
-    #     sql = args[0]
-    #     qry = self.__fetch_query(sql, None)
-    #     if len(args) > 1:
-    #         args = args[1]
-    #         qry.bind(args)
-    #     elif len(params.keys()) > 0:
-    #         qry.bind(params)
-    #     return qry
 
     def query(self, *args, **params):
         sql = args[0]
@@ -218,14 +190,13 @@ class Database(object):
 
         key = None
         if allow_cache is True:
-            key = util.hash(sql)
-            print "TODO: add cache table for fetching queries!"
+            key = toolkit.hash(sql)
+            # print "TODO: add cache table for fetching queries!"
 
         qry = Query.create(sql)
         if allow_cache is True:
             qry.key = key
-            print "TODO: add cache table for saving queries!"
-
+            # print "TODO: add cache table for saving queries!"
 
         if len(args) > 1:
             qry.bind(args[1])
@@ -236,29 +207,6 @@ class Database(object):
         return qry
 
 
-
-        # if sql.strip().find(' ') == -1:
-        #     try:
-        #         qry = self._queries.get(sql)
-        #     except Exception, ex:
-        #         #raise ex.extend(DatabaseException(None,self))
-        #         raise ex
-        # else:
-        #     key = tools.hash(sql.strip().lower())
-        #     qry = self._queries.try_get(key)
-        #     if qry is None:
-        #         if qry is None:
-        #             qry = Query.new(sql)
-        #             self._queries.register(key, qry.clone())
-
-        qry = self.__fetch_query(sql, None)
-        if len(args) > 1:
-            args = args[1]
-            qry.bind(args)
-        elif len(params.keys()) > 0:
-            qry.bind(params)
-        return qry
-
     @classmethod
     def plugin(cls, plugin):
         setattr(cls, plugin.func_name, plugin)
@@ -267,7 +215,7 @@ class Database(object):
     def open(cls, **kwd):
         driver = kwd.get("driver", None)
         if driver is None:
-            raise Exception("The database driver is not specified.")
+            raise DatabaseError("The database driver is not specified.")
 
         params = kwd.get("params", {})
         config = Config(
@@ -297,22 +245,23 @@ class Database(object):
 
 
 class Connection(object):
-    __slots__ = ["__db", "__conn", "__txn", "use_txn"]
+    __slots__ = ["__db__", "__conn__", "__txn__", "__qry__", "use_txn"]
     def __init__(self, db, use_txn=False):
-        self.__db = db
-        self.__conn = None
-        self.__txn = None
+        self.__db__ = db
+        self.__conn__ = None
+        self.__txn__ = None
+        self.__qry__ = None, None
         self.use_txn = use_txn
 
     def __enter__(self):
-        self.__conn = self.__db.engine.connect()
+        self.__conn__ = self.__db__.engine.connect()
         if self.use_txn is True:
-            self.__txn = self.__conn.begin()
+            self.__txn__ = self.__conn__.begin()
         return self
 
     def __exit__(self, error_type, error_val, error_tb):
-        conn = self.__conn
-        txn = self.__txn
+        conn = self.__conn__
+        txn = self.__txn__
         if txn is not None:
             if error_val is None:
                 try:
@@ -324,36 +273,72 @@ class Connection(object):
                     txn.rollback()
                 except:
                     pass
-            self.__txn = None
+            self.__txn__ = None
 
         if conn is not None:
             try:
                 conn.close()
             except:
                 pass
-            self.__conn = None
+            self.__conn__ = None
 
         if error_val is not None:
+            sql, params = None, None
+            try:
+                sql = self.__qry__[0]
+            except:
+                pass
+
+            try:
+                params = self.__qry__[1]
+            except:
+                pass
+
+            self.__qry__ = None, None
+
             type = error_type.__name__
             message = error_val.message
-            raise Exception(message)
+
+            if sql is None:
+                try:
+                    sql = error_val.statement
+                except:
+                    pass
+
+            if params is None:
+                try:
+                    params = error_val.params
+                except:
+                    pass
+
+                if params is not None:
+                    if len(params) == 0:
+                        params = None
+                    else:
+                        obj = {}
+                        for x, param in enumerate(params):
+                            obj[x] = param
+                        params = obj
+            if sql is None:
+                raise DatabaseError(message, inner=error_val)
+            raise DatabaseQueryError(message, sql=sql, params=params, inner=error_val)
+        self.__qry__ = None, None
 
     def select(self, sql, **params):
         return self.execute(sql, **params)
 
-    # def insert(self, sql, **params):
-    #     return self.execute(sql, **params)
-
     def execute(self, sql, **params):
+        self.__qry__ = None, None
+
         if isinstance(sql, basestring) is False:
             if isinstance(sql, list) is True:
                 queries = sql
                 if len(queries) == 0:
                     return None
 
-                if self.__txn is None:
+                if self.__txn__ is None:
                     self.use_txn = True
-                    self.__txn = self.__conn.begin()
+                    self.__txn__ = self.__conn__.begin()
 
                 return map(self.execute, queries)
             elif isinstance(sql, Query) is True:
@@ -363,7 +348,10 @@ class Connection(object):
                 if params is None:
                     params = {}
 
-        conn = self.__conn
+        conn = self.__conn__
+
+        self.__qry__ = (sql, None) if len(params) == 0 else (sql, params)
+
         sql = text(sql)
         result, records = None, None
         if len(params) == 0:
@@ -377,7 +365,6 @@ class Connection(object):
             elif result.returns_rows is True:
                 records = Connection.extract_recordset(result)
         return records
-
 
     @staticmethod
     def extract_recordset(records):

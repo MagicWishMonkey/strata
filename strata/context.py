@@ -1,25 +1,28 @@
-from strata import *
-from strata.threads import current_thread
-
+#from fuze import *
+from . import system
+from . import toolkit
+from .threads import current_thread
 
 
 
 class Context(object):
-    #__app_obj__ = None
     __slots__ = [
         "__uuid__",
-        "__app__",
         "__bag__",
-        "__person__",
-        "__session__"
+        "__member__",
+        "__session__",
+        "ip_address",
+        "user_agent_string"
+
     ]
 
     def __init__(self, app):
-        self.__uuid__ = util.guid(10)
-        self.__app__ = app
+        self.__uuid__ = toolkit.guid(12)
         self.__bag__ = None
-        self.__person__ = None
+        self.__member__ = None
         self.__session__ = None
+        self.ip_address = None
+        self.user_agent_string = None
         current_thread.set("context", self)
 
     @property
@@ -36,24 +39,27 @@ class Context(object):
 
     @property
     def app(self):
-        return self.__app__
+        app = system.application
+        if app is None:
+            raise Exception("The application has not been initialized.")
+        return app
 
     @property
-    def person(self):
-        person = self.__person__
-        if person is None:
+    def member(self):
+        member = self.__member__
+        if member is None:
             session = self.__session__
             if session is None:
                 return None
-            return session.person
-        return person
+            return session.member
+        return member
 
     @property
-    def person_id(self):
-        person = self.person
-        if person is None:
+    def member_id(self):
+        member = self.__member__
+        if member is None:
             return None
-        return person.id
+        return member.id
 
     @property
     def session(self):
@@ -67,21 +73,62 @@ class Context(object):
             return None
         return session.id
 
-    def attach(self, session):
-        current_session = self.session
-        if isinstance(session, Person):
-            person = session
-            current_person = self.person
-            if person == current_person:
-                return self
-            self.__person__ = person
-            if current_session is not None:
-                if current_session.person != person:
-                    self.__session__ = None
-                    return self
+    @property
+    def authenticated(self):
+        if self.__member__ is None:
+            return False
+        return True
 
+    def attach(self, session):
+        if session is None:
+            self.__session__ = None
+            self.__member__ = None
+            return self
+
+        #current_session = self.session
+        if self.member_id != session.member_id:
+            self.__member__ = session.member
+        self.__session__ = session
         return self
 
+
+    def clear(self):
+        self.__session__ = None
+        self.__member__ = None
+        self.__bag__ = None
+        return self
+
+        # if isinstance(session, toolkit.Person):
+        #     member = session
+        #     current_member = self.__member__
+        #     if member == current_member:
+        #         return self
+        #     self.__member__ = member
+        #     if current_session is not None:
+        #         if current_session.member != member:
+        #             self.__session__ = None
+        #             return self
+        # # elif isinstance(session, Session):
+        # #     if current_session is not None:
+        # #         if current_session == session:
+        # #             return self
+        # #
+        # #     self.__session__ = session
+        # return self
+
+    @property
+    def config(self):
+        return self.app.config
+
+    @property
+    def codex(self):
+        bag = self.bag
+        try:
+            return bag["codex"]
+        except:
+            codex = self.app.codex
+            bag["codex"] = codex
+            return codex
 
     @property
     def db(self):
@@ -89,7 +136,7 @@ class Context(object):
         try:
             return bag["db"]
         except:
-            db = self.app.db()
+            db = self.app.db
             bag["db"] = db
             return db
 
@@ -99,7 +146,7 @@ class Context(object):
         try:
             return bag["redis"]
         except:
-            redis = self.app.db("redis")
+            redis = self.app.redis
             bag["redis"] = redis
             return redis
 
@@ -131,15 +178,17 @@ class Context(object):
         if ctx is not None:
             return ctx
 
-        from strata.app import App
-        ctx = App.create_context()
+        app = system.application
+        ctx = app.context()
         return ctx
 
+
+
     def __repr__(self):
-        person = self.person
-        if person is None:
+        member = self.__member__
+        if member is None:
             return "Context#%s" % self.__uuid__
-        return "Context#%s - %s" % (self.__uuid__, person.formatted)
+        return "Context#%s - %s" % (self.__uuid__, member.username)
 
     def __str__(self):
         return self.__repr__()
@@ -147,7 +196,7 @@ class Context(object):
 
 class Extension(object):
     def __init__(self, *args):
-        self.ctx = args[0] if len(args) > 0 else util.context()
+        self.ctx = args[0] if len(args) > 0 else toolkit.context()
 
     def __getattr__(self, method):
         fn = getattr(self.ctx, method)

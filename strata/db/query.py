@@ -1,4 +1,4 @@
-from strata import util
+from .. import toolkit
 
 
 
@@ -71,7 +71,7 @@ class Query(object):
                 name = token.name
                 param = obj.get(name, None)
                 if isinstance(param, (list, dict)) is True:
-                    param = util.json(param)
+                    param = toolkit.json(param)
                 self.params[name] = param
         except Exception, ex:
             raise ex
@@ -208,75 +208,6 @@ class Query(object):
         records = self.get_record_list(adapter, auto_cast=auto_cast)
         return None if len(records) == 0 else records[0]
 
-    # def get_object_list(self, adapter=None, auto_cast=True):
-    #     return self.select(adapter=adapter, auto_cast=auto_cast)
-    #
-    # def get_object(self, adapter=None, auto_cast=True):
-    #     records = self.get_object_list(adapter=adapter, auto_cast=auto_cast)
-    #     return None if len(records) == 0 else records[0]
-
-    # def stream(self, *adapter, **kwd):
-    #     adapter = adapter[0] if len(adapter) > 0 else self.adapter
-    #     chunk_size = kwd.get("chunk_size", kwd.get("count", None))
-    #     stream = self.database.record_stream(self, chunk_size=chunk_size)
-    #     def wrapper(stream, adapter, chunk_size):
-    #         if chunk_size is None:
-    #             for o in stream:
-    #                 yield adapter(o)
-    #         else:
-    #             for o in stream:
-    #                 yield map(adapter, o)
-    #
-    #     if adapter is not None:
-    #         stream = wrapper(stream, adapter, chunk_size)
-    #
-    #     return stream
-
-    #
-    # def inline(self):
-    #     table = {}
-    #     for x,token in enumerate(self.tokens):
-    #         for ix in range(token.startIX-1,token.endIX-1):
-    #             #param = self.params[token.name]
-    #             table[ix] = x
-    #
-    #     txt = []
-    #     capture = False
-    #     for x,c in enumerate(self.sql):
-    #         if table.get(x,None) is None:
-    #             capture = False
-    #         elif capture is False:
-    #             token = self.tokens[table.get(x)]
-    #             param = self.params[token.name]
-    #             if tools.is_string(param):
-    #                 param = tools.sql_sanitize(param)
-    #                 txt.append("'"+param+"'")
-    #             elif tools.is_num(param):
-    #                 txt.append(str(param))
-    #             elif tools.is_blank(param):
-    #                 txt.append("null")
-    #             else:
-    #                 txt.append(str(param))
-    #             capture = True
-    #
-    #         if capture is False:
-    #             txt.append(c)
-    #
-    #     sql = ''.join(txt)
-    #     return sql
-
-    # def swap(self, token, value):
-    #     txt = self.sql
-    #     if value is None:
-    #         value = "null"
-    #     elif isinstance(value, basestring) is False:
-    #         value = tools.stringify(value)
-    #
-    #     while txt.find(token) > -1:
-    #         txt = txt.replace(token, value)
-    #     self.sql = txt
-    #     return self
-
     @staticmethod
     def create(sql, params=None):
         qry = parse(sql, params=params)
@@ -372,8 +303,7 @@ class Query(object):
         def wrap(txt):
             if txt is None or len(txt) == 0:
                 return "null"
-            return "'%s'" % util.sql_sanitize(txt)
-
+            return "'%s'" % toolkit.sql_sanitize(txt)
 
 
         while sql.endswith(";"):
@@ -494,7 +424,7 @@ class Query(object):
         params = self.params
         if params is None:
             return sql
-        params = util.json(params)
+        params = toolkit.json(params)
         return "{sql}\t{params}".format(sql=sql, params=params)
 
 
@@ -505,11 +435,11 @@ class Query(object):
         elif value is None:
             self.sql = self.sql.replace(token, "null")
         else:
-            self.sql = self.sql.replace(token, util.stringify(value))
+            self.sql = self.sql.replace(token, toolkit.stringify(value))
         return self
 
     def trace(self, *columns):
-        columns = util.unroll(columns)
+        columns = toolkit.unroll(columns)
         rows = self.get_object_list()
         width = len(columns)
         height = len(rows)

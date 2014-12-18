@@ -1,5 +1,5 @@
 import sqlite3
-from strata import util
+from .. import toolkit
 
 
 class SQLite(object):
@@ -10,8 +10,8 @@ class SQLite(object):
                 uri = "{uri}.sqlite".format(uri=uri)
                 self.uri = uri
 
-            data = util.unbase64("U1FMaXRlIGZvcm1hdCAzAAQAAQEAQCAgAAAAAQAAAAEAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAC3mAQ0AAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==")
-            file = util.file(uri)
+            data = toolkit.unbase64("U1FMaXRlIGZvcm1hdCAzAAQAAQEAQCAgAAAAAQAAAAEAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAC3mAQ0AAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==")
+            file = toolkit.file(uri)
             file.write_data(data)
             self.execute("""
             CREATE TABLE "sequences" (
@@ -45,7 +45,7 @@ class SQLite(object):
                         val = str(val)
                     except:
                         try:
-                            val = util.text.to_unicode(val)
+                            val = toolkit.text.to_unicode(val)
                         except:
                             val = val.encode('ascii', 'ignore')
                 elif val is None:
@@ -101,122 +101,6 @@ class SQLite(object):
         if rowid is not None:
             return rowid
         return self
-
-    def tables(self):
-        sql = "SELECT name FROM sqlite_master WHERE type='table';"
-        tables = self.scalars(sql)
-        return tables
-
-        #for x, table in enumerate(tables):
-        #    table_schema = self.schema(table)
-        #    tables[x] = table_schema
-        #return tables
-
-    def schema(self, table):
-        def draw_table(*objects, **kwd):
-            from prettytable import PrettyTable
-
-            fields = kwd.get("fields", None)
-            alias = kwd.get("alias", None)
-            objects = util.unroll(objects)
-            if len(objects) == 0:
-                table = PrettyTable([])
-                print table
-                return
-
-            if isinstance(objects[0], (int, long)) is True:
-                objects = [{"id": o} for o in objects]
-            elif isinstance(objects[0], basestring) is True:
-                objects = [{"value": o} for o in objects]
-            #elif is_model(objects[0]) is True:
-            #    objects = [o.dictionary() for o in objects]
-
-            def sort_cols(columns):
-                ordered = []
-                column_table = dict((c.lower(), c) for c in columns)
-                if column_table.get("id", None) is not None:
-                    ordered.append(column_table["id"])
-                if column_table.get("label", None) is not None:
-                    ordered.append(column_table["label"])
-                if column_table.get("name", None) is not None:
-                    ordered.append(column_table["name"])
-                if column_table.get("username", None) is not None:
-                    ordered.append(column_table["username"])
-
-                column_table = dict((c, None) for c in ordered)
-                for column in columns:
-                    if column not in column_table:
-                        ordered.append(column)
-                return ordered
-
-
-            if alias is not None:
-                keys = alias.keys()
-                for o in objects:
-                    for key in keys:
-                        o[alias[key]] = o[key]
-                        o.pop(key)
-
-
-
-            columns = objects[0].keys()
-            if fields is not None:
-                columns = fields
-
-            order = kwd.get("order", None)
-            if order is not None:
-                order = order.split(",")
-                order = [o.strip() for o in order]
-                order_table = {}
-                for x in xrange(len(columns)):
-                    order_table[columns[x]] = (x, columns[x])
-
-                for x in xrange(len(order)):
-                    if order_table.get(order[x], None) is not None:
-                        order_table[order[x]] = (x, order[x])
-
-                ordered = order_table.values()
-                ordered = sorted(ordered, key=lambda o: o[0], reverse=False)
-                columns = [o[1] for o in ordered]
-
-
-            transforms = {}
-            columns = sort_cols(columns)
-            table = PrettyTable(columns)
-            table.padding_width = 1
-            for column in columns:
-                table.align[column] = "l"
-                xform = kwd.get(column, lambda o: o)
-                transforms[column] = xform
-
-            for o in objects:
-                values = []
-                for column in columns:
-                    val = o[column]
-                    val = transforms[column](val)
-                    if isinstance(val, basestring) is True:
-                        if len(val) > 100:
-                            val = "%s..." % val[:100]
-                            #val = "{val}...".format(val=val[:100])
-                    elif val is None:
-                        val = "null"
-                    values.append(val)
-                table.add_row(values)
-
-            return table
-
-        table = table.strip().replace(";", "")
-        sql = "PRAGMA table_info(%s);" % table.strip()
-        records = self.select(sql)
-        columns = []
-        for r in records:
-            name = r["name"]
-            type = r["type"]
-            columns.append({"name": name, "type": type})
-
-        table = draw_table(*(columns))
-        txt = table.__str__()
-        return txt
 
     def query_buffer(self):
         return QueryBuffer(self)

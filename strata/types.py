@@ -1,5 +1,4 @@
 import inspect
-# from types import *
 from datetime import datetime
 
 
@@ -64,7 +63,7 @@ class TypeTable:
         try:
             meta_type = cls.__metaclass__
             #o = cls()
-            if meta_type is MetaModel:#isinstance(meta_type, MetaModel) is True:
+            if meta_type is MetaModel:
                 TypeTable.__models__[name] = cls
                 try:
                     repositories = TypeTable.__repositories__
@@ -75,11 +74,9 @@ class TypeTable:
                     repository = repositories[repository_name]
                     repository.__model__ = cls
                     cls.__repository__ = repository
-
-                    #repositories[repository_name].__model__ = cls
                 except:
                     pass
-            elif meta_type is MetaRepository:#if isinstance(meta_type, MetaRepository) is True:
+            elif meta_type is MetaRepository:
                 TypeTable.__repositories__[name] = cls
                 try:
                     models = TypeTable.__models__
@@ -328,8 +325,8 @@ def is_blank(o):
         return True if len(o) == 0 else False
     elif isinstance(o, (list, tuple)):
         return True if len(o) == 0 else False
-    #elif isinstance(o, dict):
-     #   return True if len(o) == 0 else False
+        #elif isinstance(o, dict):
+        #   return True if len(o) == 0 else False
 
     return False
 

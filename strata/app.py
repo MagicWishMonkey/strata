@@ -1,7 +1,10 @@
-from strata import *
-from strata.context import Context
-from strata.db.database import Database
-from strata.db.redis_client import RedisClient
+from . import system
+from . import toolkit
+from .context import Context
+from .toolkit.structs import *
+from .toolkit.codex import Codex
+from .db import *
+
 
 
 class App(object):
@@ -9,76 +12,181 @@ class App(object):
 
     def __init__(self):
         self.__active__ = False
-        self.__dbs__ = None
-
-    @classmethod
-    def plugin(cls, plugin):
-        setattr(cls, plugin.func_name, plugin)
+        self.__db__ = None
+        self.__redis__ = None
+        self.__smtp__ = None
+        self.__dirs__ = None
+        self.__config__ = None
+        self.__codex__ = None
+        # self.__admins__ = None
+        self.__workspace__ = None
 
     @property
-    def active(self):
-        return self.__active__
+    def admins(self):
+        if self.__active__ is False:
+            raise Exception("The application has not been initialized.")
+        return system.admins
 
-    def db(self, *name):
-        dbs = self.__dbs__
-        assert dbs is not None, "The app is not initialized!"
+    @property
+    def config(self):
+        if self.__active__ is False:
+            raise Exception("The application has not been initialized.")
+        return self.__config__
 
-        if len(name) == 0:
-            return dbs[0][1].clone()
-        name = name[0]
-        for o in dbs:
-            if o[0] == name:
-                return o[1].clone()
+    @property
+    def codex(self):
+        if self.__active__ is False:
+            raise Exception("The application has not been initialized.")
+        codex = self.__codex__
+        codex = codex.clone()
+        return codex
 
-        raise Exception("The requested database could not be found: %s" % name)
+    @property
+    def db(self):
+        if self.__active__ is False:
+            raise Exception("The application has not been initialized.")
+        db = self.__db__
+        if db is None:
+            raise Exception("The database has not been configured.")
+        return db
+
+    @property
+    def redis(self):
+        if self.__active__ is False:
+            raise Exception("The application has not been initialized.")
+        redis = self.__redis__
+        if redis is None:
+            raise Exception("The redis database has not been configured.")
+        return redis
+
+    @property
+    def smtp(self):
+        if self.__active__ is False:
+            raise Exception("The application has not been initialized.")
+        return self.__smtp__
+
+    @property
+    def dirs(self):
+        if self.__active__ is False:
+            raise Exception("The application has not been initialized.")
+        return self.__dirs__
+
+    @property
+    def shared_folder(self):
+        if self.__active__ is False:
+            raise Exception("The application has not been initialized.")
+        return self.__dirs__.shared
 
     def context(self):
+        if self.__active__ is False:
+            raise Exception("The application has not been initialized.")
         return Context(self)
 
     @staticmethod
     def create_context():
         app = App.__instance__
-        if app.active is False:
-            app.load()
         return app.context()
 
     @staticmethod
-    def get():
-        return App.__instance__
+    def setup():
+        if App.__instance__ is not None:
+            return App.__instance__
 
+        app = App()
+        App.__instance__ = app
+        system.application = app
+        return app
 
-@App.plugin
-def load(self):
-    if self.__active__ is True:
-        print "Already loaded!"
+    def load(self, workspace):
+        if self.__active__ is True:
+            raise Exception("The app has already been initialized.")
 
-    log = system.log
-    settings = system.settings
-    if settings is None:
-        log.info("The settings file is not specified. Skipping.")
+        if isinstance(workspace, basestring) is True:
+            workspace = toolkit.folder(workspace)
+
+        if workspace.exists is False:
+            raise Exception("The workspace does not exist: %s" % workspace.uri)
+
+        settings = workspace.file("settings.json")
+        if settings.exists is False:
+            raise Exception("The settings.json file does not exist: %s" % settings.uri)
+
+        config = toolkit.unjson(settings.read_text())
+        config = Wrapper.create(config)
+
+        override = workspace.file("settings.override.json")
+        if override.exists is True:
+            override = toolkit.unjson(override.read_text())
+            config.override(override)#Wrapper.create(config))
+
+        system.flags.bind(**(config.flags))
+        if system.flags.quarantine is True:
+            system.quarantine = True
+
+        app_cfg = config.application
+        system.app_uri = app_cfg.uri
+        system.app_name = app_cfg.name
+        system.workspace = workspace
+        system.default_member_avatar = app_cfg.default_member_avatar
+
+        administrators = app_cfg.administrators
+        if administrators:
+            if isinstance(administrators, list) is False:
+                administrators = [administrators]
+
+            for x, admin in enumerate(administrators):
+                person = toolkit.Person(admin)
+                if person is None or person.email is None:
+                    raise Exception("Invalid administrator format: %s" % admin)
+                administrators[x] = person
+
+        if administrators:
+            system.admins = administrators
+
+        # init the codex module
+        key_cfg = config.keychain
+        self.__codex__ = Codex(
+            salt=str(key_cfg.salt),
+            weak=str(key_cfg.weak),
+            strong=str(key_cfg.strong),
+            hmac=str(key_cfg.hmac)
+        )
+
+        # init the db module
+        db_cfg = config.database
+        if db_cfg.params is not None:
+            db_cfg.params = db_cfg.params.reduce()
+
+        self.__db__ = Database.open(
+            driver=db_cfg.driver,
+            server=db_cfg.server,
+            port=db_cfg.port,
+            database=db_cfg.database,
+            username=db_cfg.username,
+            password=db_cfg.password,
+            params=db_cfg.params
+        )
+
+        # init the smtp module
+        smtp_cfg = config.smtp
+
+        dir_cfg = config.directories
+        directories = {}
+        for name in dir_cfg:
+            uri = dir_cfg[name]
+            directories[name] = toolkit.folder(uri)
+
+        self.__dirs__ = Wrapper(directories)
+        self.__workspace__ = workspace
+        self.__config__ = config
+
         self.__active__ = True
-        return self
+        system.seal()
 
-    def init_dbs(self, settings):
-        dbs = []
-        databases = settings.databases
-        for name in databases:
-            db_cfg = databases[name]
-            db_cfg["label"] = "%s:%s" % (db_cfg["driver"], name)
-            driver = db_cfg["driver"]
-            if driver == "redis":
-                db = RedisClient.open(**(db_cfg))
-                dbs.append((name, db))
-                continue
-            db = Database.open(**(db_cfg))
-            dbs.append((name, db))
-            if name == "default":
-                if len(dbs) > 1:
-                    dbs.reverse()
-        self.__dbs__ = dbs
-
-    init_dbs(self, settings)
-    self.__active__ = True
+        return self.context()
 
 
-App.__instance__ = App()
+
+
+
+app = App.setup()

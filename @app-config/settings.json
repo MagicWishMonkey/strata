@@ -38,6 +38,21 @@
             "pool": 100
         }
     },
+    "database": {
+        "driver": "mysql",
+        "server": "localhost",
+        "port": 3306,
+        "database": "topferral",
+        "username": "whoat",
+        "password": "dallas",
+        "params": {
+            "convert_unicode": true,
+            "pool_recycle": 3600,
+            "pool_timeout": 120,
+            "pool_size": 10,
+            "max_overflow": 10
+        }
+    },
     "email": {
         "default_sender": "Willy Wonka <willy.wonka@gmail.com>",
         "server": "smtp.gmail.com",

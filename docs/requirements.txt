@@ -3,7 +3,4 @@ simplejson
 pycrypto
 python-dateutil
 requests
-BeautifulSoup
 termcolor
-ctypes
-redis

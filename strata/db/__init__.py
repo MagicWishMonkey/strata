@@ -1,2 +1,2 @@
-from strata.db.database import Database
-from strata.db.sqlite import *
+from .database import Database
+from .sqlite import *

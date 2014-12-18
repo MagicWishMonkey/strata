@@ -27,7 +27,7 @@ def clear(key):
         if val is None:
             return
 
-        #val.clear()
+            #val.clear()
     except:
         pass
 
